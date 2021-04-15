@@ -72,7 +72,7 @@ class FaceImageModel(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(12*12*64, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(128, 64),
+            nn.Linear(128, 128),
             nn.ReLU(inplace=True),
             )
 
