@@ -1,6 +1,5 @@
-import math, shutil, os, time, argparse
+import shutil, os, time, argparse
 import numpy as np
-import scipy.io as sio
 
 import torch
 import torch.nn as nn
@@ -8,12 +7,10 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
-import torchvision.models as models
 
 from ITrackerData import ITrackerData
 from ITrackerModel import ITrackerModel
+from telefonica_reseach.trackers.ITrackerDiff import ITrackerDiff
 
 '''
 Train/test code for iTracker.
@@ -47,6 +44,7 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser(description='iTracker-pytorch-Trainer.')
 parser.add_argument('--data_path', help="Path to processed dataset. It should contain metadata.mat. Use prepareDataset.py.")
+parser.add_argument('--results_path', default=False, help='Path to write results')
 parser.add_argument('--sink', type=str2bool, nargs='?', const=True, default=False, help="Just sink and terminate.")
 parser.add_argument('--reset', type=str2bool, nargs='?', const=True, default=False, help="Start from scratch (do not load).")
 args = parser.parse_args()
@@ -119,7 +117,7 @@ def main():
 
     # Quick test
     if doTest:
-        validate(val_loader, model, criterion, epoch)
+        validate(val_loader, model, criterion, epoch, results_path=args.results_path)
         return
 
     for epoch in range(0, epoch):
@@ -189,14 +187,22 @@ def train(train_loader, model, criterion,optimizer, epoch):
 
         count=count+1
 
-        print('Epoch (train): [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
-                   epoch, i, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses))
+        message = 'Epoch (train): [{0}][{1}/{2}]\t'
+        'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+        'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+        'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
+            epoch, i, len(train_loader), batch_time=batch_time,
+            data_time=data_time, loss=losses)
 
-def validate(val_loader, model, criterion, epoch):
+        print(message)
+
+        with open('calibration_process_f.txt', 'a') as f:
+            f.write(message)
+
+
+
+
+def validate(val_loader, model, criterion, epoch, results_path=False):
     global count_test
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -207,9 +213,11 @@ def validate(val_loader, model, criterion, epoch):
     model.eval()
     end = time.time()
 
+    if results_path:
+        itrackerdiff = ITrackerDiff(results_path)
 
     oIndex = 0
-    for i, (row, imFace, imEyeL, imEyeR, faceGrid, gaze) in enumerate(val_loader):
+    for i, (face_id, frame_id, row, imFace, imEyeL, imEyeR, faceGrid, gaze) in enumerate(val_loader):
         # measure data loading time
         data_time.update(time.time() - end)
         imFace = imFace.cuda()
@@ -250,6 +258,26 @@ def validate(val_loader, model, criterion, epoch):
                   'Error L2 {lossLin.val:.4f} ({lossLin.avg:.4f})\t'.format(
                     epoch, i, len(val_loader), batch_time=batch_time,
                    loss=losses,lossLin=lossesLin))
+
+        if results_path:
+            gaze = gaze.cpu().detach().numpy()
+            output = output.cpu().detach().numpy()
+            diff = gaze - output
+            dist = dist = np.sqrt(np.sum(diff**2, axis=1))
+            dist = dist.reshape((dist.shape[0], 1))
+
+            data = np.concatenate([gaze, output, diff, dist], axis=1)
+
+            for r in range(data.shape[0]):
+                itrackerdiff.append(face_id[r], frame_id[r],
+                                    data[r, 0], data[r, 1],
+                                    data[r, 2], data[r, 3],
+                                    data[r, 4], data[r, 5],
+                                    data[r, 6])
+
+        itrackerdiff.serialize()
+
+
 
     return lossesLin.avg
 

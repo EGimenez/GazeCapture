@@ -1,0 +1,23 @@
+A Guanyar!!!
+
+;-)
+
+Next Steps
+· Calibration is too slow?
+· Error Bias Analysis:
+    · For each user, does the error depend on the time session?
+    · For each user-point: calculate bias -> generate distribution // per user // global
+    · Create "Heat Map"
+    · Are there Glogal Biased points?
+· Process all information -> Table Info (orientation, accelerations...)
+· Read Papers
+· Model error vs Table Info
+    · ...
+    · generate phone dynamics..
+    · Does it make sense to introduce previous estimation of position?
+· Try to model erros
+· Paper Series Temporales
+· Check Image: Color -> Black & White
+· Calibration Tricks
+    · Tolerance -> error = min(threshold, error)
+    · Project to screen
