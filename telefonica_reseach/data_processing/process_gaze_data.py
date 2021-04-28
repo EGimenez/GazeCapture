@@ -136,8 +136,40 @@ def process_motion(user: Path, dot_info: pd.DataFrame):
     # for d, i in zip(data, range(len(data))):
     data_index = 0
     data_length = len(data)
+    p_m = False
     for i, frame in dot_info.iterrows():
-        data_can = data[data_index]
+        try:
+            data_can = data[data_index]
+            df.loc[i, 'motion_Correct'] = 1
+        except:
+            if not p_m:
+                print('no available mobile data for: {}'.format(user.name))
+                p_m = True
+            df.loc[i, 'motion_Correct'] = 0
+            # Now motion data and frames are align
+            for j in ['Y', 'X', 'Z']:
+                df.loc[i, 'motion_GravityX_'+j] = 0
+
+            for j in ['Y', 'X', 'Z']:
+                df.loc[i, 'motion_UserAcceleration_'+j] = 0
+
+            for j in range(1,10):
+                df.loc[i, 'motion_AttitudeRotationMatrix_'+str(j)] = 0
+
+            df.loc[i, 'motion_AttitudePitch'] = 0
+            df.loc[i, 'motion_Time'] = 0
+
+            for j in ['X', 'W', 'Y', 'Z']:
+                df.loc[i, 'motion_AttitudeQuaternion_'+j] = 0
+
+            df.loc[i, 'motion_AttitudeRoll'] = 0
+
+            for j in ['Y', 'X', 'Z']:
+                df.loc[i, 'motion_RotationRate_'+j] = 0
+
+            df.loc[i, 'motion_AttitudeYaw'] = 0
+            df.loc[i, 'motion_DotNum'] = 0
+            continue
 
         # We align motion data and frame data
         for d in range(data_index, data_length):
@@ -150,7 +182,6 @@ def process_motion(user: Path, dot_info: pd.DataFrame):
                 break
             else:
                 data_can = data_this
-
 
         # Now motion data and frames are align
         for j in ['Y', 'X', 'Z']:
@@ -258,14 +289,33 @@ if __name__ == '__main__':
         for r in range(0, 8):
             mpm.add_processor(MyProcessor)
 
+        sent = 0
+        expl = 0
+
+        real_exists = [d for d in os.listdir(data_target)]
+
         for user in os.scandir(data_source):
             if user.is_dir():
-                mpm.send_task({'user': data_source / user, 'data_target': data_target})
+                expl += 1
+                if not os.path.exists(data_target / user.name / 'table_info.csv'):
+                    sent += 1
+                    mpm.send_task({'user': data_source / user, 'data_target': data_target})
+                else:
+                    if not user.name in real_exists:
+                        print('joder')
 
+        received = 0
         while True:
             result = mpm.next_result()
 
             if result:
                 print(result)
+                received += 1
             else:
                 break
+
+        print('report')
+        print('expl: {}'.format(expl))
+        print('sent: {}'.format(sent))
+        print('received: {}'.format(received))
+        print('hola')

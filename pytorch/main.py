@@ -11,6 +11,8 @@ import torch.utils.data
 from ITrackerData import ITrackerData
 from ITrackerModel import ITrackerModel
 from telefonica_reseach.trackers.ITrackerDiff import ITrackerDiff
+from telefonica_reseach import config
+
 
 '''
 Train/test code for iTracker.
@@ -44,7 +46,7 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser(description='iTracker-pytorch-Trainer.')
 parser.add_argument('--data_path', help="Path to processed dataset. It should contain metadata.mat. Use prepareDataset.py.")
-parser.add_argument('--results_path', default=False, help='Path to write results')
+parser.add_argument('--results_dir', default=False, help='Path to write results')
 parser.add_argument('--sink', type=str2bool, nargs='?', const=True, default=False, help="Just sink and terminate.")
 parser.add_argument('--reset', type=str2bool, nargs='?', const=True, default=False, help="Start from scratch (do not load).")
 args = parser.parse_args()
@@ -117,7 +119,10 @@ def main():
 
     # Quick test
     if doTest:
-        validate(val_loader, model, criterion, epoch, results_path=args.results_path)
+        if not (config.results_path / args.results_dir).exists():
+            (config.results_path / args.results_dir).mkdir()
+
+        validate(val_loader, model, criterion, epoch, results_path= config.results_path / args.results_dir)
         return
 
     for epoch in range(0, epoch):
