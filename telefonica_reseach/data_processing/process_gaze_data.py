@@ -7,7 +7,7 @@ import pandas as pd
 import json
 from pathlib import Path
 from tqdm import tqdm
-from telefonica_reseach.utils.multiprocessing.MultiProcessingFramework import MultiProcessManager, Processor
+from telefonica_reseach.utils.my_multiprocessing.MultiProcessingFramework import MultiProcessManager, Processor
 
 apple_device_data = pd.read_csv(config.apple_device_data_path)
 
